@@ -18,9 +18,3 @@ const privateKeyPem = key.privateKey.export({
 
 fs.writeFileSync('public.pem', publicKeyPem);
 fs.writeFileSync('private.pem', privateKeyPem);
-
-const password = 'changeme'
-const username = 'user';
-const htpasswd = `${username}:${password}\n`;
-
-fs.writeFileSync('users.htpasswd', htpasswd);

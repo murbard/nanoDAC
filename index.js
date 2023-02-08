@@ -9,6 +9,7 @@ const bodyParser = require('body-parser');
 const fs = require('fs');
 const tweetnacl = require('tweetnacl')
 const blake = require('blakejs');
+const basicAuth = require('express-basic-auth')
 
 
 let secretKey = null;
@@ -33,27 +34,17 @@ const redis = require('redis');
 const client = redis.createClient({ host: 'localhost', port: 6379, return_buffers: true});
 client.connect();
 
+app.use(basicAuth({
+    users: {
+        'admin': 'changeme'
+    }}));
 
-// Use HTTP-Auth to authenticate users
-const auth = require('http-auth');
-const basic = auth.basic({
-    realm: "Private Area.",
-    file: __dirname + "/users.htpasswd"
-});
-
-app.use(function (req, res, next) {
-    if (!basic.check(req, res)) {
-        return;
-    }
-    next();
-});
 
 app.get('/:hash', async (req, res) => {
     /* Retrieve a blob by its hash in the redis database. The signature is the first 64 bytes of the blob. */
     var hash = req.params.hash;
     try {
         reply = await client.get(hash);
-        console.log(reply, reply.length);
         reply = Buffer.from(reply, 'base64');
         var signature = reply.slice(0, 64);
         var blob = reply.slice(64);
@@ -69,9 +60,7 @@ app.put('/', async (req, res) => {
     var blob = Buffer.from(req.body.data, 'base64');
     const hash = Buffer.from(blake.blake2b(blob, null, 32));
     const sig = Buffer.from(tweetnacl.sign.detached(hash, secretKey));
-    console.log(sig.length);
     blob = Buffer.concat([sig, blob]).toString('base64');
-    console.log('storing blob of lenght', blob.length);
     const hex = hash.toString('hex');
     try {
         const reply = await client.set(hex, blob);
