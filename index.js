@@ -39,7 +39,6 @@ app.use(basicAuth({
         'admin': 'changeme'
     }}));
 
-
 app.get('/:hash', async (req, res) => {
     /* Retrieve a blob by its hash in the redis database. The signature is the first 64 bytes of the blob. */
     var hash = req.params.hash;
@@ -57,7 +56,12 @@ app.get('/:hash', async (req, res) => {
 app.put('/', async (req, res) => {
     /* Store a blob in the redis database under its BLAKE-2B(256) hash.
        The signature is the first 64 bytes of the blob and uses the ed22519 curve. */
-    var blob = Buffer.from(req.body.data, 'base64');
+    try {
+        var blob = Buffer.from(req.body.data, 'base64');
+    }  catch (err) {
+        console.log(req.body)
+        return res.status(400).send('Invalid data.');
+    }
     const hash = Buffer.from(blake.blake2b(blob, null, 32));
     const sig = Buffer.from(tweetnacl.sign.detached(hash, secretKey));
     blob = Buffer.concat([sig, blob]).toString('base64');
